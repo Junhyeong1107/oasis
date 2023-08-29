@@ -31,7 +31,7 @@ export default function LoginScreen() {
         navigation.dispatch(
           CommonActions.reset({
             index: 0,
-            routes: [{ name: "공원" }], // 초기화하고 싶은 화면 이름으로 변경
+            routes: [{ name: "Main" }], // 초기화하고 싶은 화면 이름으로 변경
           })
         );
       })

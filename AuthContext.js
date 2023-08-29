@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
     // 로그인 처리 로직
     setIsLoggedIn(true);
     setUserEmail(email);
-    setUserPoints(points);
+    setUserPoints(userPoints);
   };
 
   const handleUserPoint = () => {
@@ -30,7 +30,6 @@ export const AuthProvider = ({ children }) => {
     setIsLoggedIn(false);
     setUserEmail(null);
     setUserPoints(0);
-    setUserUid(null);
   };
 
   const handleLoginScreenPress = () => {

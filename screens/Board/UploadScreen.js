@@ -9,9 +9,12 @@ import {
   getButtonTexts,
 } from "../../firebaseConfig";
 
+import { useNavigation } from "@react-navigation/native";
+
 const UploadScreen = () => {
   const [selectedImages, setSelectedImages] = useState(["", "", ""]);
   const [buttonTexts, setButtonTexts] = useState(["", "", "", "", ""]);
+  const navigation = useNavigation();
 
   useEffect(() => {
     loadButtonTexts(); // 컴포넌트가 마운트될 때 버튼 텍스트를 불러옴
@@ -60,7 +63,9 @@ const UploadScreen = () => {
           const blob = await response.blob();
           const imageName = new Date().getTime().toString();
           return uploadImage(blob, imageName); // 이미지 업로드 함수 호출
+    
         }
+        navigation.navigate("Board");
       });
 
       await Promise.all(uploadTasks);
@@ -76,7 +81,7 @@ const UploadScreen = () => {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
     });
 
-    if (!result.cancelled) {
+    if (!result.canceled) {
       const newSelectedImages = [...selectedImages];
       newSelectedImages[index] = result.uri;
       setSelectedImages(newSelectedImages);
@@ -86,14 +91,17 @@ const UploadScreen = () => {
   const launchImageLibraryWithIndex = async (index) => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: false, // Only allow selecting one image
     });
-
-    if (!result.canceled) {
+  
+    if (!result.canceled && result.assets.length > 0) {
+      const selectedAsset = result.assets[0];
       const newSelectedImages = [...selectedImages];
-      newSelectedImages[index] = result.uri;
+      newSelectedImages[index] = selectedAsset.uri;
       setSelectedImages(newSelectedImages);
     }
   };
+  
 
   return (
     <View>
