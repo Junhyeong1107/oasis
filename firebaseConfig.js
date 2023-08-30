@@ -11,12 +11,17 @@ import {
   collection,
   addDoc,
   getDoc,
+  ref as strRef,
   doc,
+  setDoc,
+  query as storeQuery,
+  where,
+  getDocs,
 } from "firebase/firestore";
 
 import {
   getStorage,
-  ref,
+  ref as stoRef,
   uploadBytes,
   getDownloadURL,
   listAll,
@@ -38,11 +43,11 @@ const db = getFirestore(app); // Initialize firestore object
 const storage = getStorage(app); // Initialize storage object
 
 export { auth, createUser, signin };
-export { db, collection, addDoc, doc, getDoc };
-export { storage, ref, uploadBytes, getDownloadURL, listAll };
+export { db, collection, addDoc, doc, getDoc, strRef, setDoc, storeQuery,where,getDocs};
+export { storage, stoRef, uploadBytes, getDownloadURL, listAll };
 
 export async function uploadImage(file, fileName) {
-  const storageRef = ref(storage, `images/${fileName}`); // fileName을 사용하여 경로 설정
+  const storageRef = stoRef(storage, `images/${fileName}`); // fileName을 사용하여 경로 설정
   await uploadBytes(storageRef, file);
   return storageRef;
 }
@@ -58,3 +63,15 @@ export async function saveButtonText(buttonIndex, buttonText) {
     return null;
   }
 }
+export const saveImageDataToFirestore = async (imageURL, associatedText) => {
+  try {
+    const docRef = await addDoc(collection(db, "images"), {
+      imageURL: imageURL,
+      associatedText: associatedText,
+    });
+
+    console.log("Image data saved with ID: ", docRef.id);
+  } catch (error) {
+    console.error("Error saving image data:", error);
+  }
+};

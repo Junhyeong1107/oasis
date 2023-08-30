@@ -1,43 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, Image, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import {
-  storage,
-  ref,
-  uploadImage,
-  saveButtonText,
-  getButtonTexts,
-} from "../../firebaseConfig";
+import { storage, storef, uploadImage, saveButtonText,saveImageDataToFirestore,getDownloadURL } from "../../firebaseConfig";
 
 import { useNavigation } from "@react-navigation/native";
 
 const UploadScreen = () => {
-  const [selectedImages, setSelectedImages] = useState(["", "", ""]);
-  const [buttonTexts, setButtonTexts] = useState(["", "", "", "", ""]);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [activeButtons, setActiveButtons] = useState([]); // Track the active button
   const navigation = useNavigation();
 
-  useEffect(() => {
-    loadButtonTexts(); // 컴포넌트가 마운트될 때 버튼 텍스트를 불러옴
-  }, []);
-
-  const loadButtonTexts = async () => {
-    const loadedButtonTexts = await getButtonTexts();
-    const buttonTextArray = Array(5).fill(""); // 기본값으로 초기화
-    loadedButtonTexts.forEach((item) => {
-      buttonTextArray[item.buttonIndex] = item.buttonText;
-    });
-    setButtonTexts(buttonTextArray);
-  };
-
-  const handleButtonClick = async (buttonIndex) => {
-    const newButtonTexts = [...buttonTexts];
-    const buttonText = ["가", "나", "다", "라", "마"][buttonIndex]; // 원하는 텍스트로 변경
-    newButtonTexts[buttonIndex] = buttonText;
-    setButtonTexts(newButtonTexts);
-    await saveButtonText(buttonIndex, buttonText);
-  };
-
-  const handleImageSelection = async (index) => {
+  const handleButtonClick = async () => {
     Alert.alert(
       "이미지 선택",
       "카메라로 사진을 찍을지 갤러리에서 사진을 선택할지 선택해주세요.",
@@ -45,101 +18,115 @@ const UploadScreen = () => {
         { text: "취소", style: "cancel" },
         {
           text: "카메라",
-          onPress: () => launchCameraWithIndex(index),
+          onPress: () => launchCamera(),
         },
         {
           text: "갤러리",
-          onPress: () => launchImageLibraryWithIndex(index),
+          onPress: () => launchImageLibrary(),
         },
       ]
     );
   };
 
-  const uploadImagesToFirebase = async () => {
-    try {
-      const uploadTasks = selectedImages.map(async (image) => {
-        if (image) {
-          const response = await fetch(image);
-          const blob = await response.blob();
-          const imageName = new Date().getTime().toString();
-          return uploadImage(blob, imageName); // 이미지 업로드 함수 호출
-    
-        }
-        navigation.navigate("Board");
-      });
+  const handletextButtonClick = (buttonText) => {
+    if (activeButtons.includes(buttonText)) {
+      setActiveButtons(activeButtons.filter((btn) => btn !== buttonText));
+    } else {
+      setActiveButtons([...activeButtons, buttonText]);
+    }
 
-      await Promise.all(uploadTasks);
+  };
+
+
+
+
+  const uploadImageToFirebase = async () => {
+    try {
+      if (!selectedImage) {
+        Alert.alert("Error", "이미지를 선택해주세요.");
+        return;
+      }
+
+      const response = await fetch(selectedImage);
+      const blob = await response.blob();
+      const imageName = new Date().getTime().toString();
+      const storageRef = await uploadImage(blob, imageName);
+
+      const downloadURL = await getDownloadURL(storageRef); 
+   
+      await saveImageDataToFirestore(downloadURL, activeButtons); 
+
+      setSelectedImage(null);
+      setActiveButtons(null); // Reset active button
+
       Alert.alert("Success", "이미지 업로드가 완료되었습니다.");
     } catch (error) {
-      console.error("Error uploading images:", error);
+      console.error("Error uploading image:", error);
       Alert.alert("Error", "이미지 업로드 중 오류가 발생했습니다.");
     }
   };
 
-  const launchCameraWithIndex = async (index) => {
+  const launchCamera = async () => {
     let result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
     });
 
     if (!result.canceled) {
-      const newSelectedImages = [...selectedImages];
-      newSelectedImages[index] = result.uri;
-      setSelectedImages(newSelectedImages);
+      setSelectedImage(result.uri);
     }
   };
 
-  const launchImageLibraryWithIndex = async (index) => {
+  const launchImageLibrary = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: false, // Only allow selecting one image
     });
-  
+
     if (!result.canceled && result.assets.length > 0) {
-      const selectedAsset = result.assets[0];
-      const newSelectedImages = [...selectedImages];
-      newSelectedImages[index] = selectedAsset.uri;
-      setSelectedImages(newSelectedImages);
+      setSelectedImage(result.assets[0].uri);
     }
   };
-  
+
+
 
   return (
     <View>
-      <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
-        {selectedImages.map((image, index) => (
-          <TouchableOpacity
-            key={index}
-            onPress={() => handleImageSelection(index)}
-          >
-            {image ? (
-              <Image
-                source={{ uri: image }}
-                style={{ width: 100, height: 100 }}
-              />
-            ) : (
-              <Text>이미지 선택</Text>
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
+      <TouchableOpacity onPress={handleButtonClick}>
+        {selectedImage ? (
+          <Image source={{ uri: selectedImage }} style={{ width: 200, height: 200 }} />
+        ) : (
+          <Text>이미지 선택</Text>
+        )}
+        </TouchableOpacity>
+      <TouchableOpacity onPress={() => handletextButtonClick("가")}>
+        <Text style={activeButtons === "가" ? styles.activeButtonText : styles.buttonText}>가</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => handletextButtonClick("나")}>
+        <Text style={activeButtons === "나" ? styles.activeButtonText : styles.buttonText}>나</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => handletextButtonClick("다")}>
+        <Text style={activeButtons === "다" ? styles.activeButtonText : styles.buttonText}>다</Text>
+      </TouchableOpacity>
       <View style={{ marginTop: 20 }}>
-        {buttonTexts.map((text, index) => (
-          <TouchableOpacity
-            key={index}
-            onPress={() => handleButtonClick(index)}
-            style={{ marginVertical: 10, alignItems: "center" }}
-          >
-            <Text>{text || "버튼 " + (index + 1)}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <View style={{ marginTop: 20 }}>
-        <TouchableOpacity onPress={uploadImagesToFirebase}>
+        <TouchableOpacity onPress={uploadImageToFirebase}>
           <Text>이미지 업로드</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
+};
+
+
+const styles = {
+  buttonText: {
+    fontSize: 16,
+    fontWeight: "normal",
+  },
+  activeButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "blue", // Customize the active button style
+  },
 };
 
 export default UploadScreen;

@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from "react-native";
-import { storage, ref, getDownloadURL, listAll } from "../../firebaseConfig";
+import { storage, stoRef, getDownloadURL, listAll,storeQuery,collection,db,where,getDocs} from "../../firebaseConfig";
 
 import { useNavigation } from "@react-navigation/native";
 
@@ -19,22 +19,44 @@ const BoardScreen = () => {
 
   const fetchImageUrls = async () => {
     try {
-      const storageRef = ref(storage, "images"); // images 폴더 경로
+      const storageRef = stoRef(storage, "images");
       const fileList = await listAll(storageRef);
-
-      const urls = await Promise.all(
+  
+      const urlsAndData = await Promise.all(
         fileList.items.map(async (item) => {
           const url = await getDownloadURL(item);
-          return url;
+  
+          // Fetch additional data from Firestore based on the image's URL
+          const q = storeQuery(
+            collection(db, "images"),
+            where("imageURL", "==", url)
+          );
+          const querySnapshot = await getDocs(q);
+  
+          console.log("Query Snapshot:", querySnapshot); // Add this line
+  
+          if (querySnapshot.docs.length === 0) {
+            return {
+              url: url,
+              associatedText: "", // No associated text found for this URL
+            };
+          }
+  
+          const data = querySnapshot.docs[0].data();
+  
+          return {
+            url: url,
+            associatedText: data ? data.associatedText : "",
+          };
         })
       );
-
-      setImageUrls(urls);
+  
+      setImageUrls(urlsAndData);
     } catch (error) {
       console.error("Error fetching image URLs from Firebase Storage:", error);
     }
   };
-
+  
   useEffect(() => {
     fetchImageUrls();
   }, []);
@@ -60,7 +82,7 @@ const BoardScreen = () => {
       <TouchableOpacity style={styles.uploadButton} onPress={handleUploadPress}>
         <Text style={styles.uploadButtonText}>업로드</Text>
       </TouchableOpacity>
-      {imageUrls.map((url, index) => (
+      {imageUrls.map((item, index) => (
         <View style={styles.postContainer} key={index}>
           <View style={styles.header}>
             <Image
@@ -69,16 +91,25 @@ const BoardScreen = () => {
             />
             <Text style={styles.username}>사용자 이름</Text>
           </View>
-          {/* Add your Carousel or ImageSlider component here */}
           <View style={styles.slide}>
-            <Image source={{ uri: url }} style={styles.image} />
+            <Image source={{ uri: item.url }} style={styles.image} />
           </View>
+          <View>
+            <Text style={styles.nametext}>{item.associatedText}</Text>
+          </View>
+          <View style={styles.separator} />
           <View style={styles.actions}>
             <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>좋아요</Text>
+              <Image
+                source={require("../../assets/board/like.png")}
+                style={styles.actionButtonImage}
+              />
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>공유하기</Text>
+              <Image
+                source={require("../../assets/board/like.png")}
+                style={styles.actionButtonImage}
+              />
             </TouchableOpacity>
           </View>
           <Text style={styles.caption}>이미지 설명 텍스트</Text>
@@ -87,6 +118,7 @@ const BoardScreen = () => {
     </ScrollView>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -97,6 +129,16 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 8,
     marginBottom: 20,
+  },
+  nametext: {
+    fontSize: 14,
+    marginLeft: 17,
+    marginTop: 10,
+  },
+  separator: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#CCCCCC", // 회색 실선의 색상
+    marginVertical: 5, // 상하 여백 조절
   },
   header: {
     flexDirection: "row",
@@ -119,9 +161,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   image: {
-    width: 250,
-    height: 250,
-    borderRadius: 8,
+    width: 380,
+    height: 350,
+    borderRadius: 10,
+  },
+  actionButtonImage: {
+    width: 20,
+    height: 20,
+    marginLeft: 10,
+    marginRight: 20,
+    // 추가적인 스타일링을 적용할 수 있습니다.
   },
   actions: {
     flexDirection: "row",
