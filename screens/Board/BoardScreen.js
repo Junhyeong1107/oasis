@@ -9,6 +9,8 @@ import {
   RefreshControl,
 } from "react-native";
 import { storage, stoRef, getDownloadURL, listAll,storeQuery,collection,db,where,getDocs} from "../../firebaseConfig";
+import Swiper from "react-native-swiper"; // react-native-swiper 패키지를 import
+
 
 import { useNavigation } from "@react-navigation/native";
 
@@ -73,51 +75,34 @@ const BoardScreen = () => {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      <TouchableOpacity style={styles.uploadButton} onPress={handleUploadPress}>
-        <Text style={styles.uploadButtonText}>업로드</Text>
-      </TouchableOpacity>
-      {imageUrls.map((item, index) => (
-        <View style={styles.postContainer} key={index}>
-          <View style={styles.header}>
-            <Image
-              source={require("../../assets/tabBar/홈_포커스.png")}
-              style={styles.profileImage}
-            />
-            <Text style={styles.username}>사용자 이름</Text>
-          </View>
-          <View style={styles.slide}>
-            <Image source={{ uri: item.url }} style={styles.image} />
-          </View>
-          <View>
-            <Text style={styles.nametext}>{item.associatedText}</Text>
-          </View>
-          <View style={styles.separator} />
-          <View style={styles.actions}>
-            <TouchableOpacity style={styles.actionButton}>
-              <Image
-                source={require("../../assets/board/like.png")}
-                style={styles.actionButtonImage}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
-              <Image
-                source={require("../../assets/board/like.png")}
-                style={styles.actionButtonImage}
-              />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.caption}>이미지 설명 텍스트</Text>
-        </View>
-      ))}
-    </ScrollView>
+<ScrollView
+  style={styles.container}
+  refreshControl={
+    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+  }
+>
+  <TouchableOpacity style={styles.uploadButton} onPress={handleUploadPress}>
+    <Text style={styles.uploadButtonText}>업로드</Text>
+  </TouchableOpacity>
+  <Swiper style={styles.wrapper} showsButtons={false}>
+    {imageUrls.map((item, index) => (
+      <View key={index} style={styles.slide}>
+        <Image source={{ uri: item.url }} style={styles.image} />
+      </View>
+    ))}
+  </Swiper>
+  <View style={styles.textContainer}>
+    {imageUrls.map((item, index) => (
+      <Text key={index} style={styles.nametext}>
+        {item.associatedText}
+      </Text>
+    ))}
+  </View>
+</ScrollView>
+
   );
 };
+
 
 
 const styles = StyleSheet.create({
@@ -156,6 +141,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   slide: {
+    width: "100%",
+    height: 400,
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,

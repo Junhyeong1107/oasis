@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, Image, Alert } from "react-native";
+import { View, Text, TouchableOpacity, Image, Alert ,ScrollView} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { storage, storef, uploadImage, saveButtonText,saveImageDataToFirestore,getDownloadURL } from "../../firebaseConfig";
 
 import { useNavigation } from "@react-navigation/native";
 
 const UploadScreen = () => {
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImages, setSelectedImages] = useState([]);
   const [activeButtons, setActiveButtons] = useState([]); // Track the active button
   const navigation = useNavigation();
 
@@ -37,27 +37,38 @@ const UploadScreen = () => {
 
   };
 
+  const handleImageSelect = (selectedImage) => {
+    if (!selectedImages.includes(selectedImage)) {
+      setSelectedImages([...selectedImages, selectedImage]);
+    }
+  };
+  
 
 
 
-  const uploadImageToFirebase = async () => {
+  const uploadImagesToFirebase = async () => {
     try {
-      if (!selectedImage) {
+      if (selectedImages.length == 0) {
         Alert.alert("Error", "이미지를 선택해주세요.");
         return;
       }
+      const uploadPromises = selectedImages.map(async (selectedImage) => {
+        const response = await fetch(selectedImage);
+        const blob = await response.blob();
+        const imageName = new Date().getTime().toString();
+        const storageRef = await uploadImage(blob, imageName);
+  
+        const downloadURL = await getDownloadURL(storageRef);
+        return downloadURL; // Return the URL for each uploaded image
+      });
 
-      const response = await fetch(selectedImage);
-      const blob = await response.blob();
-      const imageName = new Date().getTime().toString();
-      const storageRef = await uploadImage(blob, imageName);
+      const imageUrls = await Promise.all(uploadPromises);
 
-      const downloadURL = await getDownloadURL(storageRef); 
-   
-      await saveImageDataToFirestore(downloadURL, activeButtons); 
-
-      setSelectedImage(null);
-      setActiveButtons(null); // Reset active button
+      // Now you have an array of download URLs, you can save them to Firestore
+      await saveImageDataToFirestore(imageUrls, activeButtons);
+  
+      setSelectedImages([]);
+      setActiveButtons([]); // Reset active button
 
       Alert.alert("Success", "이미지 업로드가 완료되었습니다.");
     } catch (error) {
@@ -71,50 +82,56 @@ const UploadScreen = () => {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
     });
 
-    if (!result.canceled) {
-      setSelectedImage(result.uri);
+    if (!result.cancelled) {
+      handleImageSelect(result.uri);
     }
   };
 
   const launchImageLibrary = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: false, // Only allow selecting one image
+      allowsMultipleSelection: true,
     });
 
-    if (!result.canceled && result.assets.length > 0) {
-      setSelectedImage(result.assets[0].uri);
+    if (!result.cancelled && result.assets.length > 0) {
+      result.assets.forEach(asset => {
+        handleImageSelect(asset.uri);
+      });
     }
   };
 
 
-
   return (
-    <View>
+    <ScrollView>
       <TouchableOpacity onPress={handleButtonClick}>
-        {selectedImage ? (
-          <Image source={{ uri: selectedImage }} style={{ width: 200, height: 200 }} />
+        {selectedImages.length > 0 ? (
+          <ScrollView horizontal>
+            {selectedImages.map((uri, index) => (
+              <Image key={index} source={{ uri }} style={{ width: 200, height: 200, margin: 5 }} />
+            ))}
+          </ScrollView>
         ) : (
           <Text>이미지 선택</Text>
         )}
-        </TouchableOpacity>
+      </TouchableOpacity>
       <TouchableOpacity onPress={() => handletextButtonClick("가")}>
-        <Text style={activeButtons === "가" ? styles.activeButtonText : styles.buttonText}>가</Text>
+        <Text style={activeButtons.includes("가") ? styles.activeButtonText : styles.buttonText}>가</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => handletextButtonClick("나")}>
-        <Text style={activeButtons === "나" ? styles.activeButtonText : styles.buttonText}>나</Text>
+        <Text style={activeButtons.includes("나") ? styles.activeButtonText : styles.buttonText}>나</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => handletextButtonClick("다")}>
-        <Text style={activeButtons === "다" ? styles.activeButtonText : styles.buttonText}>다</Text>
+        <Text style={activeButtons.includes("다") ? styles.activeButtonText : styles.buttonText}>다</Text>
       </TouchableOpacity>
       <View style={{ marginTop: 20 }}>
-        <TouchableOpacity onPress={uploadImageToFirebase}>
+        <TouchableOpacity onPress={uploadImagesToFirebase}>
           <Text>이미지 업로드</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   );
 };
+
 
 
 const styles = {
