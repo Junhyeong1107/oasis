@@ -8,7 +8,7 @@ import {
   Image,
   Alert,
 } from "react-native";
-import { auth, signin } from "../../firebaseConfig";
+import { auth, signin,doc,db,getDoc } from "../../firebaseConfig";
 import { useNavigation } from "@react-navigation/native";
 import LoginImage from "../../assets/logo_img.png"; // 이미지 경로 수정
 import { CommonActions } from "@react-navigation/native";
@@ -24,20 +24,32 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
 
   const handleLogin = async () => {
-    await signin(auth, email, password)
-      .then((userCredential) => {
-        const user = userCredential.user;
-        handleLoggedin(user.email); // 사용자 정보도 함께 저장
+    try {
+      const userCredential = await signin(auth, email, password);
+      const user = userCredential.user;
+  
+      // 사용자의 UID로 Firestore에서 사용자 정보를 가져오기
+      const userDocRef = doc(db, "users", user.uid);
+      const userDocSnapshot = await getDoc(userDocRef);
+  
+      if (userDocSnapshot.exists()) {
+        const userData = userDocSnapshot.data();
+        const nickname = userData.nickname;
+  
+        handleLoggedin(user.email,nickname,user.uid);
+  
         navigation.dispatch(
           CommonActions.reset({
             index: 0,
-            routes: [{ name: "Main" }], // 초기화하고 싶은 화면 이름으로 변경
+            routes: [{ name: "Main" }],
           })
         );
-      })
-      .catch((error) => {
-        Alert.alert("Login Failed", error.message);
-      });
+      } else {
+        Alert.alert("User Not Found", "사용자 정보를 찾을 수 없습니다.");
+      }
+    } catch (error) {
+      Alert.alert("Login Failed", error.message);
+    }
   };
   return (
     <View style={styles.container}>

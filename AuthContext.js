@@ -7,14 +7,18 @@ export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState(null);
   const [userPoints, setUserPoints] = useState(0);
-
+  const [userNickname, setUserNickname] = useState(null);
+  const [userUid, setUserUid] = useState(null);
+  
   const navigation = useNavigation(); // 네비게이션 객체 가져오기
 
-  const handleLoggedin = (email) => {
+  const handleLoggedin = (email,nickname,uid) => {
     // 로그인 처리 로직
     setIsLoggedIn(true);
     setUserEmail(email);
     setUserPoints(userPoints);
+    setUserNickname(nickname);
+    setUserUid(uid);
   };
 
   const handleUserPoint = () => {
@@ -49,6 +53,8 @@ export const AuthProvider = ({ children }) => {
         userPoints,
         handleUserPoint,
         handleUserPoint_reset,
+        userNickname,
+        userUid,
       }}
     >
       {children}

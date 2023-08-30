@@ -19,6 +19,7 @@ const LoggedInMyPage = () => {
     handleLoggedout,
     userEmail,
     userPoints,
+    userNickname,
     handleUserPoint,
     handleUserPoint_reset,
   } = useAuth();
@@ -47,7 +48,7 @@ const LoggedInMyPage = () => {
           />
         </View>
         <View style={styles.info_lv3}>
-          <Text style={styles.info_text}>{userEmail}</Text>
+          <Text style={styles.info_text}>{userNickname}</Text>
         </View>
         {isLoggedIn ? (
           <View style={{ alignItems: "center" }}>

@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
-import { auth, createUser, db, collection, addDoc } from "../../firebaseConfig";
+import { auth, createUser, db, collection, addDoc,doc ,setDoc} from "../../firebaseConfig";
 
 import { useNavigation } from "@react-navigation/native";
 
@@ -15,6 +15,7 @@ export default function SignupScreen() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
+  const [nickname, setNickname] = useState(""); // 추가된 부분
 
   const navigation = useNavigation();
 
@@ -23,19 +24,14 @@ export default function SignupScreen() {
       const userCredential = await createUser(auth, email, password);
       const user = userCredential.user;
 
-      // Save email and password to authentication
-
-      // Save name and address to Firestore
-      const userInfo = {
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(userDocRef, {
         email: user.email,
         name: name,
         address: address,
+        nickname: nickname, // 추가된 부분
         exp: 0,
-      };
-
-      const docRef = await addDoc(collection(db, "users"), userInfo);
-      console.log("Document written with ID: ", docRef.id);
-
+      });
       // Additional actions on successful signup
       navigation.navigate("Main");
     } catch (error) {
@@ -65,6 +61,12 @@ export default function SignupScreen() {
         placeholder="이름"
         onChangeText={setName}
         value={name}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="닉네임" // 추가된 부분
+        onChangeText={setNickname} // 추가된 부분
+        value={nickname} // 추가된 부분
       />
       <TextInput
         style={styles.input}

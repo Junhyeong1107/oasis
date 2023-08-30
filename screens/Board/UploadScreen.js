@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, Image, Alert ,ScrollView} from "react-native";
+import { View, Text, TouchableOpacity, Image, Alert ,ScrollView,TextInput} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { storage, storef, uploadImage, saveButtonText,saveImageDataToFirestore,getDownloadURL } from "../../firebaseConfig";
+import { useAuth } from "../../AuthContext";
 
 import { useNavigation } from "@react-navigation/native";
 
 const UploadScreen = () => {
   const [selectedImages, setSelectedImages] = useState([]);
   const [activeButtons, setActiveButtons] = useState([]); // Track the active button
+  const [addressInput, setAddressInput] = useState(""); // 추가된 부분
+  
+
+  const { userNickname } = useAuth();
+
   const navigation = useNavigation();
 
   const handleButtonClick = async () => {
@@ -48,8 +54,8 @@ const UploadScreen = () => {
 
   const uploadImagesToFirebase = async () => {
     try {
-      if (selectedImages.length == 0) {
-        Alert.alert("Error", "이미지를 선택해주세요.");
+      if (selectedImages.length === 0 || addressInput === "") { // 텍스트가 비어있으면 업로드 방지
+        Alert.alert("Error", "이미지와 텍스트를 모두 입력해주세요.");
         return;
       }
       const uploadPromises = selectedImages.map(async (selectedImage) => {
@@ -65,10 +71,11 @@ const UploadScreen = () => {
       const imageUrls = await Promise.all(uploadPromises);
 
       // Now you have an array of download URLs, you can save them to Firestore
-      await saveImageDataToFirestore(imageUrls, activeButtons);
+      await saveImageDataToFirestore(imageUrls, activeButtons,userNickname,addressInput);
   
       setSelectedImages([]);
       setActiveButtons([]); // Reset active button
+      setAddressInput(""); // Reset text input
 
       Alert.alert("Success", "이미지 업로드가 완료되었습니다.");
     } catch (error) {
@@ -123,6 +130,12 @@ const UploadScreen = () => {
       <TouchableOpacity onPress={() => handletextButtonClick("다")}>
         <Text style={activeButtons.includes("다") ? styles.activeButtonText : styles.buttonText}>다</Text>
       </TouchableOpacity>
+      <TextInput
+        style={styles.input}
+        placeholder="텍스트 입력"
+        onChangeText={setAddressInput}
+        value={addressInput}
+      />
       <View style={{ marginTop: 20 }}>
         <TouchableOpacity onPress={uploadImagesToFirebase}>
           <Text>이미지 업로드</Text>

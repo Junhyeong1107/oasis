@@ -63,15 +63,32 @@ export async function saveButtonText(buttonIndex, buttonText) {
     return null;
   }
 }
-export const saveImageDataToFirestore = async (imageURL, associatedText) => {
+export const saveImageDataToFirestore = async (imageURL, associatedText,userNickname,userAddress) => {
   try {
     const docRef = await addDoc(collection(db, "images"), {
       imageURL: imageURL,
       associatedText: associatedText,
+      nickname: userNickname,
+      address: userAddress,
     });
 
     console.log("Image data saved with ID: ", docRef.id);
   } catch (error) {
     console.error("Error saving image data:", error);
+  }
+};
+
+export const getUserDataFromFirestore = async (uid) => {
+  try {
+    const userDocRef = doc(db, "users", uid);
+    const userDocSnapshot = await getDoc(userDocRef);
+
+    if (userDocSnapshot.exists()) {
+      return userDocSnapshot.data();
+    } else {
+      throw new Error("User Not Found");
+    }
+  } catch (error) {
+    throw error;
   }
 };
